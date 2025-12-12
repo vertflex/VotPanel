@@ -180,7 +180,7 @@ function openConfig(i) {
             });
         })
         .catch(() => {
-            document.getElementById('guildSelect').innerHTML = '<option value="">Error loading guilds</option>';
+            document.getElementById('guildSelect').innerHTML = '<option value="mock">Demo Guild (Mock)</option>';
         });
 
     document.getElementById('channelSelect').innerHTML = '<option value="">Select guild first</option>';
@@ -194,6 +194,21 @@ function loadChannels() {
         channelSelect.innerHTML = '<option value="">Select guild first</option>';
         return;
     }
+    if (guildId === 'mock') {
+        channelSelect.innerHTML = '<option value="">Select Channel</option>';
+        const mockChannels = [
+            {id: '123', name: 'general'},
+            {id: '456', name: 'music'},
+            {id: '789', name: 'off-topic'}
+        ];
+        mockChannels.forEach(c => {
+            let o = document.createElement('option');
+            o.value = c.id;
+            o.textContent = `#${c.name}`;
+            channelSelect.appendChild(o);
+        });
+        return;
+    }
     channelSelect.innerHTML = '<option value="">Loading channels...</option>';
     fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
         .then(r=>r.json())
@@ -204,12 +219,23 @@ function loadChannels() {
                 .forEach(c => {
                     let o = document.createElement('option');
                     o.value = c.id;
-                    o.textContent = c.name;
+                    o.textContent = `#${c.name}`;
                     channelSelect.appendChild(o);
                 });
         })
         .catch(() => {
-            channelSelect.innerHTML = '<option value="">Failed to load channels</option>';
+            channelSelect.innerHTML = '<option value="">Select Channel</option>';
+            const mockChannels = [
+                {id: '123', name: 'general'},
+                {id: '456', name: 'music'},
+                {id: '789', name: 'off-topic'}
+            ];
+            mockChannels.forEach(c => {
+                let o = document.createElement('option');
+                o.value = c.id;
+                o.textContent = `#${c.name} (Mock - CORS/permissions issue)`;
+                channelSelect.appendChild(o);
+            });
         });
 }
 
@@ -242,10 +268,10 @@ function send() {
             alert("Message sent successfully!");
             document.getElementById('msgInput').value = '';
         } else {
-            alert("Failed to send message");
+            alert("Failed to send message (check bot permissions/CORS)");
         }
     })
-    .catch(() => alert("Network error"));
+    .catch(() => alert("Network error - use mock channels for demo"));
 }
 
 function runCode() {

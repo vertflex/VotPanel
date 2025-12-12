@@ -3,158 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VotPanel: Powerful Discord bot management dashboard">
+    <meta name="keywords" content="Discord, bots, dashboard, management">
     <title>VotPanel</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
         body,html{height:100%;overflow:hidden;background:#0a0a15;font-family:'Orbitron',sans-serif;color:#fff}
-        .container{position:fixed;inset:0;background:rgba(10,15,40,0.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(0,247,255,0.2);display:flex;flex-direction:column;transition:all 0.6s}
-        .topbar{padding:20px 30px;display:flex;justify-content:space-between;align-items:center}
-        .status{background:#ff0066;padding:8px 16px;border-radius:30px;font-size:14px;box-shadow:0 0 15px #ff006680}
-        .launch{background:#00ff88;padding:10px 24px;border-radius:30px;font-weight:bold;cursor:pointer;box-shadow:0 0 20px #00ff8840;transition:.3s}
-        .launch:hover{transform:scale(1.05)}
-        .addbot{display:none;background:linear-gradient(45deg,#0073e6,#00f7ff);padding:12px 28px;border-radius:30px;font-weight:bold;cursor:pointer;box-shadow:0 0 25px #00f7ff60;transition:.4s}
-        .addbot:hover{transform:scale(1.08);box-shadow:0 0 40px #00f7ff}
-        .close{font-size:32px;cursor:pointer;opacity:0.7}
+        .container{position:fixed;inset:0;background:rgba(10,15,40,0.45);backdrop-filter:blur(16px);border:1px solid rgba(0,247,255,0.2);display:flex;flex-direction:column}
+        .topbar{padding:20px 30px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+        .online{background:#00ff88;padding:10px 24px;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #00ff8860}
+        .addbot{display:none;background:linear-gradient(45deg,#0073e6,#00f7ff);padding:12px 28px;border-radius:30px;font-weight:bold;cursor:pointer}
+        .close{font-size:32px;cursor:pointer;display:none}
         .sidebar{position:absolute;left:40px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:30px;z-index:10}
         .icon{font-size:28px;opacity:0.6;transition:.3s;cursor:pointer}
         .icon:hover,.icon.active{opacity:1;transform:scale(1.3);color:#00f7ff}
-        .page{display:none;flex:1;flex-direction:column;align-items:center;justify-content:flex-start;padding:100px 40px 40px;overflow-y:auto}
+        .page{display:none;flex:1;flex-direction:column;align-items:center;justify-content:flex-start;padding:60px 40px;overflow-y:auto}
         .page.active{display:flex}
-        .logo{font-size:180px;background:linear-gradient(45deg,#00f7ff,#00aaff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px #00f7ff60;animation:glow 3s infinite alternate}
-        @keyframes glow{from{text-shadow:0 0 40px #00f7ff60}to{text-shadow:0 0 80px #00f7ff,0 0 120px #00aaff}}
+        .logo{font-size:180px;background:linear-gradient(45deg,#00f7ff,#00aaff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px #00f7ff60;animation:g 3s infinite alternate}
+        @keyframes g{0%{text-shadow:0 0 40px #00f7ff60}100%{text-shadow:0 0 80px #00f7ff,0 0 120px #00aaff}}
         .title{font-size:80px;margin:20px 0;letter-spacing:8px;text-shadow:0 0 30px #00f7ff}
         .subtitle{font-size:32px;opacity:0.9;margin-bottom:50px}
-        .btn{padding:18px 50px;font-size:24px;background:linear-gradient(45deg,#0073e6,#00f7ff);border:none;border-radius:50px;color:white;cursor:pointer;box-shadow:0 0 30px #00f7ff60;transition:.4s;margin-top:30px}
-        .btn:hover{transform:translateY(-5px);box-shadow:0 10px 40px #00f7ff90}
+        .btn{padding:18px 60px;font-size:26px;background:linear-gradient(45deg,#0073e6,#00f7ff);border:none;border-radius:50px;color:white;cursor:pointer;box-shadow:0 0 30px #00f7ff60;transition:.4s}
+        .btn:hover{transform:translateY(-6px);box-shadow:0 12px 50px #00f7ff90}
         .bot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:25px;width:100%;max-width:1400px;margin-top:30px}
-        .bot-card{background:rgba(20,30,60,0.6);border:1px solid rgba(0,247,255,0.3);border-radius:20px;padding:25px;transition:0.4s;box-shadow:0 8px 32px rgba(0,247,255,0.1);position:relative}
+        .bot-card{background:rgba(20,30,60,0.6);border:1px solid rgba(0,247,255,0.3);border-radius:20px;padding:25px;transition:.4s;box-shadow:0 8px 32px rgba(0,247,255,0.1)}
         .bot-card:hover{transform:translateY(-12px);box-shadow:0 20px 50px rgba(0,247,255,0.3)}
-        .bot-name{font-size:28px;margin-bottom:10px;color:#00f7ff}
-        .bot-desc{font-size:16px;opacity:0.8;margin-bottom:15px}
-        .token{background:#111;padding:12px 16px;border-radius:12px;font-family:monospace;font-size:14px;word-break:break-all;color:#00ff88;letter-spacing:1px;margin-bottom:20px}
-        .bot-actions{display:flex;gap:10px}
-        .btn-small{padding:8px 16px;background:linear-gradient(45deg,#0073e6,#00f7ff);border:none;border-radius:15px;color:white;cursor:pointer;font-size:12px;transition:.3s}
-        .btn-small:hover{transform:scale(1.05)}
-        .btn-delete{background:#ff0066;color:white}
-        .btn-delete:hover{box-shadow:0 0 15px #ff006680}
+        .bot-name{font-size:28px;color:#00f7ff;margin-bottom:8px}
+        .bot-desc{font-size:16px;opacity:0.8;margin:12px 0}
+        .bot-actions{display:flex;gap:12px;margin-top:15px}
+        .btn-small{padding:9px 18px;background:linear-gradient(45deg,#0073e6,#00f7ff);border:none;border-radius:15px;color:white;cursor:pointer;font-size:13px}
+        .btn-delete{background:#ff0066}
+        .form-group{margin:20px 0;width:100%;max-width:600px}
+        .form-group label{display:block;margin-bottom:8px;color:#00f7ff;font-size:18px}
+        input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(0,247,255,0.4);background:rgba(10,15,40,0.8);color:#fff;font-size:16px}
+        .send-btn{padding:14px 30px;background:linear-gradient(45deg,#00ff88,#00aaff);border:none;border-radius:15px;color:white;font-weight:bold;cursor:pointer;margin-top:10px}
+        .toggle{display:flex;align-items:center;gap:12px;margin:20px 0}
+        .toggle input{display:none}
+        .toggle label{width:50px;height:26px;background:#333;border-radius:30px;position:relative;cursor:pointer}
+        .toggle label::after{content:"";position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.3s}
+        .toggle input:checked + label{background:#00ff88}
+        .toggle input:checked + label::after{transform:translateX(24px)}
+        @media (max-width: 768px) {
+            .logo {font-size:120px;}
+            .title {font-size:50px;}
+            .subtitle {font-size:24px;}
+            .btn {padding:14px 40px;font-size:20px;}
+            .sidebar {left:20px;}
+            .topbar {padding:15px 20px;}
+            .bot-grid {grid-template-columns:1fr;}
+        }
     </style>
-    <script src="https://cdn.jsdelivr.net/gh/hcodes/simple-snow-effect/snow.js"></script>
 </head>
 <body>
 
-    <div class="container" id="app">
-        <div class="topbar">
-            <div class="status">Offline</div>
-            <div style="display:flex;gap:15px;align-items:center">
-                <div class="launch">Launch</div>
-                <div class="addbot" id="addBotBtn">＋ Add Bot</div>
-            </div>
-            <div class="close">×</div>
-        </div>
+<canvas id="snow-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
 
-        <div class="sidebar">
-            <div class="icon active" onclick="openPage('home')">Home</div>
-            <div class="icon" onclick="openPage('bots')">Bot</div>
-            <div class="icon">Tools</div>
+<div class="container">
+    <div class="topbar">
+        <div></div>
+        <div style="display:flex;gap:20px;align-items:center">
+            <div class="online">Online</div>
+            <div class="addbot" id="addBotBtn">Add Bot</div>
         </div>
-
-        <!-- HOME PAGE -->
-        <div id="home" class="page active">
-            <div class="logo">V</div>
-            <div class="title">VOTPANEL</div>
-            <div class="subtitle">ts so friggn tuff 🥀✌️</div>
-            <button class="btn">Add Bots & Dashboard</button>
-        </div>
-
-        <!-- BOTS PAGE -->
-        <div id="bots" class="page">
-            <h1 style="font-size:60px;margin-bottom:40px;text-shadow:0 0 30px #00f7ff">Your Discord Bots</h1>
-            <div class="bot-grid" id="botList">
-                <!-- Dynamic bots here -->
-            </div>
-        </div>
+        <div class="close" id="closeBtn" onclick="back()">X</div>
     </div>
 
-    <script>
-        let bots = JSON.parse(localStorage.getItem('bots')) || [];
-        let currentPage = 'home';
+    <div class="sidebar">
+        <div class="icon active" onclick="show('home')">Home</div>
+        <div class="icon" onclick="show('bots')">Bot</div>
+        <div class="icon">Tools</div>
+    </div>
 
-        function openPage(page) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(page).classList.add('active');
-            document.querySelectorAll('.icon').forEach((i, idx) => {
-                i.classList.remove('active');
-                if ((page === 'home' && idx === 0) || (page === 'bots' && idx === 1)) i.classList.add('active');
-            });
-            currentPage = page;
-            document.getElementById('addBotBtn').style.display = page === 'bots' ? 'block' : 'none';
-            if (page === 'bots') renderBots();
-        }
+    <div id="home" class="page active">
+        <div class="logo">V</div>
+        <div class="title">VotPanel</div>
+        <div class="subtitle">ts so friggn tuff</div>
+        <button class="btn">Add Bots to Dashboard</button>
+    </div>
 
-        function renderBots() {
-            const grid = document.getElementById('botList');
-            grid.innerHTML = '';
-            bots.forEach((bot, index) => {
-                const card = document.createElement('div');
-                card.className = 'bot-card';
-                card.innerHTML = `
-                    <div class="bot-name">${bot.name}</div>
-                    <div class="bot-desc">${bot.desc}</div>
-                    <div class="token">${bot.token}</div>
-                    <div class="bot-actions">
-                        <button class="btn-small" onclick="configureBot(${index})">Configure</button>
-                        <button class="btn-small btn-delete" onclick="deleteBot(${index})">Delete</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
+    <div id="bots" class="page">
+        <h1 style="font-size:60px;text-shadow:0 0 30px #00f7ff">Your Discord Bots</h1>
+        <div class="bot-grid" id="botList"></div>
+    </div>
 
-        function addBot() {
-            const token = prompt('Enter Discord Bot Token:');
-            if (!token) return;
-            fetch('https://discord.com/api/v10/users/@me', {
-                headers: { 'Authorization': `Bot ${token}` }
-            }).then(res => res.json()).then(data => {
-                if (data.id) {
-                    const desc = prompt('Enter bot description:', 'ts so friggn tuff fr fr');
-                    bots.push({ name: data.username, desc: desc || 'Default bot', token });
-                    localStorage.setItem('bots', JSON.stringify(bots));
-                    renderBots();
-                } else {
-                    alert('Invalid token');
-                }
-            }).catch(err => {
-                alert('Error fetching bot info');
-            });
-        }
+    <div id="config" class="page">
+        <h1 id="botTitle" style="font-size:60px;text-shadow:0 0 30px #00f7ff;margin-bottom:30px"></h1>
+        <div class="form-group"><label>Token</label><input type="password" id="tokenField" readonly></div>
+        <div class="form-group">
+            <label>Bot Status</label>
+            <div class="toggle">
+                <input type="checkbox" id="statusToggle">
+                <label for="statusToggle"></label>
+                <span style="font-size:18px" id="statusText">Offline</span>
+            </div>
+        </div>
+        <div class="form-group"><label>Guild</label><select id="guildSelect" onchange="loadChannels()"></select></div>
+        <div class="form-group"><label>Channel</label><select id="channelSelect"></select></div>
+        <div class="form-group"><label>Message</label><input type="text" id="msgInput" placeholder="say something..."></div>
+        <button class="send-btn" onclick="send()">Send Message</button>
+        <div class="form-group" style="margin-top:40px">
+            <label>Run Custom Code</label>
+            <textarea id="code" rows="8" placeholder="client.on('messageCreate', msg => { ... }"></textarea>
+        </div>
+        <button class="send-btn" onclick="runCode()">Run Code</button>
+    </div>
+</div>
 
-        function configureBot(index) {
-            alert(`Configuring ${bots[index].name}...`);
-        }
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script>
+particlesJS("snow-canvas", {
+  "particles": {
+    "number": { "value": 180, "density": { "enable": true, "value_area": 800 } },
+    "color": { "value": "#00f7ff" },
+    "shape": { "type": "circle" },
+    "opacity": { "value": 0.8, "random": true },
+    "size": { "value": 4, "random": true },
+    "line_linked": { "enable": false },
+    "move": {
+      "enable": true,
+      "speed": 1.5,
+      "direction": "bottom",
+      "random": false,
+      "straight": false,
+      "out_mode": "out",
+      "bounce": false
+    }
+  },
+  "interactivity": {
+    "detect_on": "canvas",
+    "events": {
+      "onhover": { "enable": false },
+      "onclick": { "enable": false },
+      "resize": true
+    }
+  },
+  "retina_detect": true
+});
 
-        function deleteBot(index) {
-            if (confirm('Delete this bot?')) {
-                bots.splice(index, 1);
-                localStorage.setItem('bots', JSON.stringify(bots));
-                renderBots();
-            }
-        }
+let bots = JSON.parse(localStorage.getItem("vbots") || "[]");
+let currentBot = null;
 
-        document.getElementById('addBotBtn').onclick = addBot;
+function show(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(page).classList.add('active');
+    document.querySelectorAll('.icon').forEach((i,idx) => {
+        i.classList.toggle('active', (page==='home'&&idx===0) || (page==='bots'&&idx===1));
+    });
+    document.getElementById('addBotBtn').style.display = page==='bots' ? 'block' : 'none';
+    document.getElementById('closeBtn').style.display = page==='config' ? 'block' : 'none';
+    if(page==='bots') render();
+}
 
-        // Init
-        if (currentPage === 'bots') renderBots();
+function render() {
+    const list = document.getElementById('botList');
+    list.innerHTML = '';
+    bots.forEach((b, i) => {
+        const card = document.createElement('div');
+        card.className = 'bot-card';
+        card.innerHTML = `
+            <div class="bot-name">${b.name}</div>
+            <div class="bot-desc">${b.desc || 'ts so friggn tuff'}</div>
+            <div class="bot-actions">
+                <button class="btn-small" onclick="openConfig(${i})">Configure</button>
+                <button class="btn-small btn-delete" onclick="del(${i})">Delete</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
 
-        snowFall.snow(document.body,{
-            count:180,
-            size:[8,20],
-            speed:[0.6,2.2],
-            wind:[-1,2],
-            opacity:[0.5,1],
-            color:"#00f7ff"
+function openConfig(i) {
+    currentBot = bots[i];
+    document.getElementById('botTitle').textContent = `Configure ${currentBot.name}`;
+    document.getElementById('tokenField').value = currentBot.token;
+    document.getElementById('statusToggle').checked = currentBot.online || false;
+    document.getElementById('statusText').textContent = currentBot.online ? "Online" : "Offline";
+    document.getElementById('guildSelect').innerHTML = '<option>Loading guilds...';
+    fetch('https://discord.com/api/v10/users/@me/guilds', {headers:{Authorization:`Bot ${currentBot.token}`}})
+        .then(r=>r.json()).then(g=> {
+            const s = document.getElementById('guildSelect');
+            s.innerHTML = '<option value="">Select Server</option>';
+            g.forEach(guild=>{ let o=document.createElement('option'); o.value=guild.id; o.text=guild.name; s.appendChild(o); });
         });
-    </script>
+    show('config');
+}
+
+function back() { show('bots'); }
+
+function loadChannels() {
+    const gid = document.getElementById('guildSelect').value;
+    if(!gid) return;
+    fetch(`https://discord.com/api/v10/guilds/${gid}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
+        .then(r=>r.json()).then(ch=> {
+            const s = document.getElementById('channelSelect');
+            s.innerHTML = '<option value="">Select Channel</option>';
+            ch.filter(c=>c.type===0).forEach(c=>{ let o=document.createElement('option'); o.value=c.id; o.text=c.name; s.appendChild(o); });
+        });
+}
+
+function send() {
+    const ch = document.getElementById('channelSelect').value;
+    const msg = document.getElementById('msgInput').value;
+    if(!ch||!msg) return alert("Select channel + message");
+    fetch(`https://discord.com/api/v10/channels/${ch}/messages`, {
+        method:"POST",
+        headers:{"Authorization":`Bot ${currentBot.token}`,"Content-Type":"application/json"},
+        body:JSON.stringify({content:msg})
+    }).then(()=>alert("Sent")).catch(()=>alert("Failed"));
+}
+
+function runCode() { alert("Custom code executed (simulated)"); }
+
+function del(i) {
+    if(confirm("Delete this bot?")){ bots.splice(i,1); localStorage.setItem("vbots",JSON.stringify(bots)); render(); }
+}
+
+document.getElementById('addBotBtn').onclick = () => {
+    const t = prompt("Bot Token:");
+    if(!t) return;
+    fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:`Bot ${t}`}})
+        .then(r=>r.json()).then(u=>{
+            if(u.id){
+                const d = prompt("Description:","ts so friggn tuff");
+                bots.push({name:u.username, desc:d, token:t, online:false});
+                localStorage.setItem("vbots",JSON.stringify(bots));
+                render();
+            }else alert("Invalid token");
+        });
+};
+
+render();
+</script>
 </body>
 </html>

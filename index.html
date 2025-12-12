@@ -7,8 +7,9 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}
-        body,html{height:100%;overflow:hidden;background:#0a0a15;font-family:'Orbitron',sans-serif;color:#fff}
-        .container{position:fixed;inset:0;background:rgba(10,15,40,0.45);backdrop-filter:blur(16px);border:1px solid rgba(0,247,255,0.2);display:flex;flex-direction:column}
+        body,html{height:100%;overflow:hidden;background:#0a0a15;font-family:'Orbitron',sans-serif;color:#fff;position:relative}
+        #snow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+        .container{position:fixed;inset:0;background:rgba(10,15,40,0.45);backdrop-filter:blur(16px);border:1px solid rgba(0,247,255,0.2);display:flex;flex-direction:column;z-index:1}
         .topbar{padding:20px 30px;display:flex;justify-content:space-between;align-items:center;z-index:10}
         .status{background:#00ff88;padding:10px 24px;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #00ff8860}
         .addbot{display:none;background:linear-gradient(45deg,#0073e6,#00f7ff);padding:12px 28px;border-radius:30px;font-weight:bold;cursor:pointer}
@@ -42,272 +43,354 @@
         .toggle label::after{content:"";position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.3s}
         .toggle input:checked + label{background:#00ff88}
         .toggle input:checked + label::after{transform:translateX(24px)}
+        .snowflake{position:absolute;width:10px;height:10px;background:#00f7ff;border-radius:50%;filter:drop-shadow(0 0 10px #00f7ff)}
         @media (max-width: 768px){.logo{font-size:120px}.title{font-size:50px}.subtitle{font-size:24px}.btn{padding:14px 40px;font-size:20px}.sidebar{left:20px}.topbar{padding:15px 20px}.bot-grid{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
-
-<canvas id="snow-canvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0"></canvas>
-
-<div class="container">
-    <div class="topbar">
-        <div></div>
-        <div style="display:flex;gap:20px;align-items:center">
-            <div class="status" id="statusBadge">Online</div>
-            <div class="addbot" id="addBotBtn">Add Bot</div>
-        </div>
-        <div class="close" id="closeBtn" onclick="back()">X</div>
-    </div>
-
-    <div class="sidebar">
-        <div class="icon active" onclick="show('home')">Home</div>
-        <div class="icon" onclick="show('bots')">Bot</div>
-        <div class="icon">Tools</div>
-    </div>
-
-    <div id="home" class="page active">
-        <div class="logo">V</div>
-        <div class="title">VotPanel</div>
-        <div class="subtitle">ts so friggn tuff</div>
-        <button class="btn">Add Bots to Dashboard</button>
-    </div>
-
-    <div id="bots" class="page">
-        <h1 style="font-size:60px;text-shadow:0 0 30px #00f7ff">Your Discord Bots</h1>
-        <div class="bot-grid" id="botList"></div>
-    </div>
-
-    <div id="config" class="page">
-        <h1 id="botTitle" style="font-size:60px;text-shadow:0 0 30px #00f7ff;margin-bottom:30px"></h1>
-        <div class="form-group"><label>Token</label><input type="password" id="tokenField" readonly></div>
-        <div class="form-group">
-            <label>Bot Status</label>
-            <div class="toggle">
-                <input type="checkbox" id="statusToggle" onchange="toggleOnline()">
-                <label for="statusToggle"></label>
-                <span style="font-size:18px" id="statusText">Offline</span>
+    <div id="snow"></div>
+    <div class="container">
+        <div class="topbar">
+            <div></div>
+            <div style="display:flex;gap:20px;align-items:center">
+                <div class="status" id="statusBadge">Online</div>
+                <div class="addbot" id="addBotBtn">Add Bot</div>
             </div>
+            <div class="close" id="closeBtn" onclick="back()">X</div>
         </div>
-        <div class="form-group"><label>Guild</label><select id="guildSelect" onchange="loadChannels()"></select></div>
-        <div class="form-group"><label>Channel</label><select id="channelSelect"></select></div>
-        <div class="form-group"><label>Message</label><input type="text" id="msgInput" placeholder="say something..."></div>
-        <button class="send-btn" onclick="send()">Send Message</button>
-        <div class="form-group" style="margin-top:40px">
-            <label>Run Custom Code</label>
-            <textarea id="code" rows="8" placeholder="client.on('messageCreate', msg => { ... }"></textarea>
+
+        <div class="sidebar">
+            <div class="icon active" onclick="show('home')">Home</div>
+            <div class="icon" onclick="show('bots')">Bot</div>
+            <div class="icon">Tools</div>
         </div>
-        <button class="send-btn" onclick="runCode()">Run Code</button>
-    </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
-<script>
-particlesJS("snow-canvas", {
-  "particles": {
-    "number": { "value": 180, "density": { "enable": true, "value_area": 800 } },
-    "color": { "value": "#00f7ff" },
-    "shape": { "type": "circle" },
-    "opacity": { "value": 0.8, "random": true },
-    "size": { "value": 4, "random": true },
-    "line_linked": { "enable": false },
-    "move": {
-      "enable": true,
-      "speed": 1.6,
-      "direction": "bottom",
-      "random": false,
-      "straight": false,
-      "out_mode": "out",
-      "bounce": false
-    }
-  },
-  "interactivity": { "events": { "resize": true } },
-  "retina_detect": true
-});
+        <div id="home" class="page active">
+            <div class="logo">V</div>
+            <div class="title">VotPanel</div>
+            <div class="subtitle">ts so friggn tuff</div>
+            <button class="btn">Add Bots to Dashboard</button>
+        </div>
 
-let bots = JSON.parse(localStorage.getItem("vbots") || "[]");
-let currentBot = null;
+        <div id="bots" class="page">
+            <h1 style="font-size:60px;text-shadow:0 0 30px #00f7ff">Your Discord Bots</h1>
+            <div class="bot-grid" id="botList"></div>
+        </div>
 
-function show(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(page).classList.add('active');
-    document.querySelectorAll('.icon').forEach((i,idx) => {
-        i.classList.toggle('active', (page==='home'&&idx===0) || (page==='bots'&&idx===1));
-    });
-    document.getElementById('addBotBtn').style.display = page==='bots' ? 'block' : 'none';
-    document.getElementById('closeBtn').style.display = page==='config' ? 'block' : 'none';
-    if(page==='bots') render();
-}
-
-function render() {
-    const list = document.getElementById('botList');
-    list.innerHTML = '';
-    bots.forEach((b, i) => {
-        const card = document.createElement('div');
-        card.className = 'bot-card';
-        card.innerHTML = `
-            <div class="bot-name">${b.name}</div>
-            <div class="bot-desc">${b.desc || 'ts so friggn tuff'}</div>
-            <div class="bot-actions">
-                <button class="btn-small" onclick="openConfig(${i})">Configure</button>
-                <button class="btn-small btn-delete" onclick="del(${i})">Delete</button>
+        <div id="config" class="page">
+            <h1 id="botTitle" style="font-size:60px;text-shadow:0 0 30px #00f7ff;margin-bottom:30px"></h1>
+            <div class="form-group"><label>Token</label><input type="password" id="tokenField" readonly></div>
+            <div class="form-group">
+                <label>Bot Status</label>
+                <div class="toggle">
+                    <input type="checkbox" id="statusToggle" onchange="toggleOnline()">
+                    <label for="statusToggle"></label>
+                    <span style="font-size:18px" id="statusText">Offline</span>
+                </div>
             </div>
+            <div class="form-group"><label>Guild</label><select id="guildSelect" onchange="loadChannels()"></select></div>
+            <div class="form-group"><label>Channel</label><select id="channelSelect"></select></div>
+            <div class="form-group"><label>Message</label><input type="text" id="msgInput" placeholder="say something..."></div>
+            <button class="send-btn" onclick="send()">Send Message</button>
+            <div class="form-group" style="margin-top:40px">
+                <label>Run Custom Code</label>
+                <textarea id="code" rows="8" placeholder="client.on('messageCreate', msg => { ... }"></textarea>
+            </div>
+            <button class="send-btn" onclick="runCode()">Run Code</button>
+        </div>
+    </div>
+
+    <script>
+        // Pure Snow.js from https://github.com/hyperstown/pure-snow.js
+        let snowflakesCount = 180;
+        let baseCSS = `
+            body { overflow-x: hidden; }
+            .snowflake { position: absolute; width: 10px; height: 10px; background: #00f7ff; border-radius: 50%; filter: drop-shadow(0 0 10px #00f7ff); }
         `;
-        list.appendChild(card);
-    });
-}
 
-function openConfig(i) {
-    currentBot = bots[i];
-    document.getElementById('botTitle').textContent = `Configure ${currentBot.name}`;
-    document.getElementById('tokenField').value = currentBot.token;
-    const isOnline = currentBot.online || false;
-    document.getElementById('statusToggle').checked = isOnline;
-    document.getElementById('statusText').textContent = isOnline ? "Online" : "Offline";
-    document.getElementById('statusBadge').textContent = isOnline ? "Online" : "Offline";
-    document.getElementById('statusBadge').style.background = isOnline ? "#00ff88" : "#ff0066";
+        let bodyHeightPx = null;
+        let pageHeightVh = null;
 
-    document.getElementById('guildSelect').innerHTML = '<option value="">Loading guilds...</option>';
-    fetch('https://discord.com/api/v10/users/@me/guilds', {headers:{Authorization:`Bot ${currentBot.token}`}})
-        .then(r=>r.json())
-        .then(guilds => {
-            const s = document.getElementById('guildSelect');
-            s.innerHTML = '<option value="">Select Server</option>';
-            guilds.forEach(g => {
-                let o = document.createElement('option');
-                o.value = g.id;
-                o.textContent = g.name;
-                s.appendChild(o);
+        function setHeightVariables() {
+            bodyHeightPx = document.body.offsetHeight;
+            pageHeightVh = (100 * bodyHeightPx / window.innerHeight);
+        }
+
+        function getSnowAttributes() {
+            const snowWrapper = document.getElementById('snow');
+            snowflakesCount = Number(snowWrapper?.dataset?.count || snowflakesCount);
+        }
+
+        function generateSnow(snowDensity = 180) {
+            snowDensity -= 1;
+            const snowWrapper = document.getElementById('snow');
+            snowWrapper.innerHTML = '';
+            for (let i = 0; i < snowDensity; i++) {
+                let board = document.createElement('div');
+                board.className = "snowflake";
+                snowWrapper.appendChild(board);
+            }
+        }
+
+        function getOrCreateCSSElement() {
+            let cssElement = document.getElementById("psjs-css");
+            if (cssElement) return cssElement;
+
+            cssElement = document.createElement('style');
+            cssElement.id = 'psjs-css';
+            document.head.appendChild(cssElement);
+            return cssElement;
+        }
+
+        function addCSS(rule) {
+            const cssElement = getOrCreateCSSElement();
+            cssElement.innerHTML = rule;
+            document.head.appendChild(cssElement);
+        }
+
+        function randomInt(value = 100) {
+            return Math.floor(Math.random() * value) + 1;
+        }
+
+        function randomIntRange(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function getRandomArbitrary(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function generateSnowCSS(snowDensity = 180) {
+            let snowflakeName = "snowflake";
+            let rule = baseCSS;
+
+            for (let i = 1; i < snowDensity; i++) {
+                let randomX = Math.random() * 100;
+                let randomOffset = Math.random() * 10;
+                let randomXEnd = randomX + randomOffset;
+                let randomXEndYoyo = randomX + (randomOffset / 2);
+                let randomYoyoTime = getRandomArbitrary(0.3, 0.8);
+                let randomYoyoY = randomYoyoTime * pageHeightVh;
+                let randomScale = Math.random();
+                let fallDuration = randomIntRange(10, pageHeightVh / 10 * 3);
+                let fallDelay = randomInt(pageHeightVh / 10 * 3) * -1;
+                let opacity = Math.random();
+
+                rule += `
+                    .${snowflakeName}:nth-child(${i}) {
+                        opacity: ${opacity};
+                        left: ${randomX}vw;
+                        animation: fall-${i} ${fallDuration}s ${fallDelay}s linear infinite;
+                    }
+                    @keyframes fall-${i} {
+                        ${randomYoyoTime * 100}% {
+                            transform: translate(${randomXEnd}vw, ${randomYoyoY}vh) scale(${randomScale});
+                        }
+                        to {
+                            transform: translate(${randomXEndYoyo}vw, ${pageHeightVh}vh) scale(${randomScale});
+                        }
+                    }
+                `;
+            }
+            addCSS(rule);
+        }
+
+        function createSnow() {
+            setHeightVariables();
+            getSnowAttributes();
+            generateSnowCSS(snowflakesCount);
+            generateSnow(snowflakesCount);
+        }
+
+        window.addEventListener('resize', createSnow);
+        window.onload = createSnow;
+
+        // Discord Panel Code
+        const PROXY = 'https://corsproxy.io/?';
+        let bots = JSON.parse(localStorage.getItem("vbots") || "[]");
+        let currentBot = null;
+
+        function show(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(page).classList.add('active');
+            document.querySelectorAll('.icon').forEach((i,idx) => {
+                i.classList.toggle('active', (page==='home'&&idx===0) || (page==='bots'&&idx===1));
             });
-        })
-        .catch(() => {
-            document.getElementById('guildSelect').innerHTML = '<option value="mock">Demo Guild (Mock)</option>';
-        });
+            document.getElementById('addBotBtn').style.display = page==='bots' ? 'block' : 'none';
+            document.getElementById('closeBtn').style.display = page==='config' ? 'block' : 'none';
+            if(page==='bots') render();
+        }
 
-    document.getElementById('channelSelect').innerHTML = '<option value="">Select guild first</option>';
-    show('config');
-}
+        function render() {
+            const list = document.getElementById('botList');
+            list.innerHTML = '';
+            bots.forEach((b, i) => {
+                const card = document.createElement('div');
+                card.className = 'bot-card';
+                card.innerHTML = `
+                    <div class="bot-name">${b.name}</div>
+                    <div class="bot-desc">${b.desc || 'ts so friggn tuff'}</div>
+                    <div class="bot-actions">
+                        <button class="btn-small" onclick="openConfig(${i})">Configure</button>
+                        <button class="btn-small btn-delete" onclick="del(${i})">Delete</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
 
-function loadChannels() {
-    const guildId = document.getElementById('guildSelect').value;
-    const channelSelect = document.getElementById('channelSelect');
-    if (!guildId) {
-        channelSelect.innerHTML = '<option value="">Select guild first</option>';
-        return;
-    }
-    if (guildId === 'mock') {
-        channelSelect.innerHTML = '<option value="">Select Channel</option>';
-        const mockChannels = [
-            {id: '123', name: 'general'},
-            {id: '456', name: 'music'},
-            {id: '789', name: 'off-topic'}
-        ];
-        mockChannels.forEach(c => {
-            let o = document.createElement('option');
-            o.value = c.id;
-            o.textContent = `#${c.name}`;
-            channelSelect.appendChild(o);
-        });
-        return;
-    }
-    channelSelect.innerHTML = '<option value="">Loading channels...</option>';
-    fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
-        .then(r=>r.json())
-        .then(channels => {
-            channelSelect.innerHTML = '<option value="">Select Channel</option>';
-            channels
-                .filter(c => c.type === 0)
-                .forEach(c => {
+        function openConfig(i) {
+            currentBot = bots[i];
+            document.getElementById('botTitle').textContent = `Configure ${currentBot.name}`;
+            document.getElementById('tokenField').value = currentBot.token;
+            const isOnline = currentBot.online || false;
+            document.getElementById('statusToggle').checked = isOnline;
+            document.getElementById('statusText').textContent = isOnline ? "Online" : "Offline";
+            document.getElementById('statusBadge').textContent = isOnline ? "Online" : "Offline";
+            document.getElementById('statusBadge').style.background = isOnline ? "#00ff88" : "#ff0066";
+
+            fetch(PROXY + 'https://discord.com/api/v10/users/@me/guilds', {headers:{Authorization:`Bot ${currentBot.token}`}})
+                .then(r=>r.json())
+                .then(guilds => {
+                    const s = document.getElementById('guildSelect');
+                    s.innerHTML = '<option value="">Select Server</option>';
+                    guilds.forEach(g => {
+                        let o = document.createElement('option');
+                        o.value = g.id;
+                        o.textContent = g.name;
+                        s.appendChild(o);
+                    });
+                })
+                .catch(() => {
+                    document.getElementById('guildSelect').innerHTML = '<option value="mock">Demo Guild (Mock)</option>';
+                });
+
+            document.getElementById('channelSelect').innerHTML = '<option value="">Select guild first</option>';
+            show('config');
+        }
+
+        function loadChannels() {
+            const guildId = document.getElementById('guildSelect').value;
+            const channelSelect = document.getElementById('channelSelect');
+            if (!guildId) {
+                channelSelect.innerHTML = '<option value="">Select guild first</option>';
+                return;
+            }
+            if (guildId === 'mock') {
+                channelSelect.innerHTML = '<option value="">Select Channel</option>';
+                const mockChannels = [
+                    {id: '123', name: 'general'},
+                    {id: '456', name: 'music'},
+                    {id: '789', name: 'off-topic'}
+                ];
+                mockChannels.forEach(c => {
                     let o = document.createElement('option');
                     o.value = c.id;
                     o.textContent = `#${c.name}`;
                     channelSelect.appendChild(o);
                 });
-        })
-        .catch(() => {
-            channelSelect.innerHTML = '<option value="">Select Channel</option>';
-            const mockChannels = [
-                {id: '123', name: 'general'},
-                {id: '456', name: 'music'},
-                {id: '789', name: 'off-topic'}
-            ];
-            mockChannels.forEach(c => {
-                let o = document.createElement('option');
-                o.value = c.id;
-                o.textContent = `#${c.name} (Mock - CORS/permissions issue)`;
-                channelSelect.appendChild(o);
-            });
-        });
-}
-
-function toggleOnline() {
-    const checked = document.getElementById('statusToggle').checked;
-    currentBot.online = checked;
-    document.getElementById('statusText').textContent = checked ? "Online" : "Offline";
-    document.getElementById('statusBadge').textContent = checked ? "Online" : "Offline";
-    document.getElementById('statusBadge').style.background = checked ? "#00ff88" : "#ff0066";
-    localStorage.setItem("vbots", JSON.stringify(bots));
-}
-
-function send() {
-    const channelId = document.getElementById('channelSelect').value;
-    const message = document.getElementById('msgInput').value.trim();
-
-    if (!channelId) return alert("Please select a channel");
-    if (!message) return alert("Please enter a message");
-
-    fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bot ${currentBot.token}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ content: message })
-    })
-    .then(r => {
-        if (r.ok) {
-            alert("Message sent successfully!");
-            document.getElementById('msgInput').value = '';
-        } else {
-            alert("Failed to send message (check bot permissions/CORS)");
+                return;
+            }
+            fetch(PROXY + `https://discord.com/api/v10/guilds/${guildId}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
+                .then(r=>r.json())
+                .then(channels => {
+                    channelSelect.innerHTML = '<option value="">Select Channel</option>';
+                    channels
+                        .filter(c => c.type === 0)
+                        .forEach(c => {
+                            let o = document.createElement('option');
+                            o.value = c.id;
+                            o.textContent = `#${c.name}`;
+                            channelSelect.appendChild(o);
+                        });
+                })
+                .catch(() => {
+                    channelSelect.innerHTML = '<option value="">Select Channel</option>';
+                    const mockChannels = [
+                        {id: '123', name: 'general'},
+                        {id: '456', name: 'music'},
+                        {id: '789', name: 'off-topic'}
+                    ];
+                    mockChannels.forEach(c => {
+                        let o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = `#${c.name} (Mock)`;
+                        channelSelect.appendChild(o);
+                    });
+                });
         }
-    })
-    .catch(() => alert("Network error - use mock channels for demo"));
-}
 
-function runCode() {
-    alert("Custom code execution simulated — ready for real backend integration");
-}
+        function toggleOnline() {
+            const checked = document.getElementById('statusToggle').checked;
+            currentBot.online = checked;
+            document.getElementById('statusText').textContent = checked ? "Online" : "Offline";
+            document.getElementById('statusBadge').textContent = checked ? "Online" : "Offline";
+            document.getElementById('statusBadge').style.background = checked ? "#00ff88" : "#ff0066";
+            localStorage.setItem("vbots", JSON.stringify(bots));
+        }
 
-function back() { show('bots'); }
+        function send() {
+            const channelId = document.getElementById('channelSelect').value;
+            const message = document.getElementById('msgInput').value.trim();
 
-function del(i) {
-    if (confirm("Delete this bot permanently?")) {
-        bots.splice(i,1);
-        localStorage.setItem("vbots", JSON.stringify(bots));
-        render();
-    }
-}
+            if (!channelId) return alert("Please select a channel");
+            if (!message) return alert("Please enter a message");
 
-document.getElementById('addBotBtn').onclick = () => {
-    const token = prompt("Enter Bot Token:");
-    if (!token) return;
+            fetch(PROXY + `https://discord.com/api/v10/channels/${channelId}/messages`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bot ${currentBot.token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ content: message })
+            })
+            .then(r => {
+                if (r.ok) {
+                    alert("Message sent successfully!");
+                    document.getElementById('msgInput').value = '';
+                } else {
+                    alert("Failed to send message");
+                }
+            })
+            .catch(() => alert("Network error"));
+        }
 
-    fetch('https://discord.com/api/v10/users/@me', {headers:{Authorization:`Bot ${token}`}})
-        .then(r=>r.json())
-        .then(user => {
-            if (user.id) {
-                const desc = prompt("Bot description:", "ts so friggn tuff") || "ts so friggn tuff";
-                bots.push({name: user.username, desc, token, online: false});
+        function runCode() {
+            alert("Custom code executed (simulated)");
+        }
+
+        function back() { show('bots'); }
+
+        function del(i) {
+            if (confirm("Delete this bot permanently?")) {
+                bots.splice(i,1);
                 localStorage.setItem("vbots", JSON.stringify(bots));
                 render();
-            } else {
-                alert("Invalid token");
             }
-        })
-        .catch(() => alert("Error validating token"));
-};
+        }
 
-render();
-</script>
+        document.getElementById('addBotBtn').onclick = () => {
+            const token = prompt("Enter Bot Token:");
+            if (!token) return;
+
+            fetch(PROXY + 'https://discord.com/api/v10/users/@me', {headers:{Authorization:`Bot ${token}`}})
+                .then(r=>r.json())
+                .then(user => {
+                    if (user.id) {
+                        const desc = prompt("Bot description:", "ts so friggn tuff") || "ts so friggn tuff";
+                        bots.push({name: user.username, desc, token, online: false});
+                        localStorage.setItem("vbots", JSON.stringify(bots));
+                        render();
+                    } else {
+                        alert("Invalid token");
+                    }
+                })
+                .catch(() => alert("Error validating token"));
+        };
+
+        render();
+    </script>
 </body>
 </html>

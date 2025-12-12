@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="VotPanel: Powerful Discord bot management dashboard">
-    <meta name="keywords" content="Discord, bots, dashboard, management">
     <title>VotPanel</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
@@ -12,7 +10,7 @@
         body,html{height:100%;overflow:hidden;background:#0a0a15;font-family:'Orbitron',sans-serif;color:#fff}
         .container{position:fixed;inset:0;background:rgba(10,15,40,0.45);backdrop-filter:blur(16px);border:1px solid rgba(0,247,255,0.2);display:flex;flex-direction:column}
         .topbar{padding:20px 30px;display:flex;justify-content:space-between;align-items:center;z-index:10}
-        .online{background:#00ff88;padding:10px 24px;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #00ff8860}
+        .status{background:#00ff88;padding:10px 24px;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #00ff8860}
         .addbot{display:none;background:linear-gradient(45deg,#0073e6,#00f7ff);padding:12px 28px;border-radius:30px;font-weight:bold;cursor:pointer}
         .close{font-size:32px;cursor:pointer;display:none}
         .sidebar{position:absolute;left:40px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:30px;z-index:10}
@@ -44,15 +42,7 @@
         .toggle label::after{content:"";position:absolute;width:22px;height:22px;background:#fff;border-radius:50%;top:2px;left:2px;transition:.3s}
         .toggle input:checked + label{background:#00ff88}
         .toggle input:checked + label::after{transform:translateX(24px)}
-        @media (max-width: 768px) {
-            .logo {font-size:120px;}
-            .title {font-size:50px;}
-            .subtitle {font-size:24px;}
-            .btn {padding:14px 40px;font-size:20px;}
-            .sidebar {left:20px;}
-            .topbar {padding:15px 20px;}
-            .bot-grid {grid-template-columns:1fr;}
-        }
+        @media (max-width: 768px){.logo{font-size:120px}.title{font-size:50px}.subtitle{font-size:24px}.btn{padding:14px 40px;font-size:20px}.sidebar{left:20px}.topbar{padding:15px 20px}.bot-grid{grid-template-columns:1fr}}
     </style>
 </head>
 <body>
@@ -63,7 +53,7 @@
     <div class="topbar">
         <div></div>
         <div style="display:flex;gap:20px;align-items:center">
-            <div class="online">Online</div>
+            <div class="status" id="statusBadge">Online</div>
             <div class="addbot" id="addBotBtn">Add Bot</div>
         </div>
         <div class="close" id="closeBtn" onclick="back()">X</div>
@@ -93,7 +83,7 @@
         <div class="form-group">
             <label>Bot Status</label>
             <div class="toggle">
-                <input type="checkbox" id="statusToggle">
+                <input type="checkbox" id="statusToggle" onchange="toggleOnline()">
                 <label for="statusToggle"></label>
                 <span style="font-size:18px" id="statusText">Offline</span>
             </div>
@@ -122,7 +112,7 @@ particlesJS("snow-canvas", {
     "line_linked": { "enable": false },
     "move": {
       "enable": true,
-      "speed": 1.5,
+      "speed": 1.6,
       "direction": "bottom",
       "random": false,
       "straight": false,
@@ -130,14 +120,7 @@ particlesJS("snow-canvas", {
       "bounce": false
     }
   },
-  "interactivity": {
-    "detect_on": "canvas",
-    "events": {
-      "onhover": { "enable": false },
-      "onclick": { "enable": false },
-      "resize": true
-    }
-  },
+  "interactivity": { "events": { "resize": true } },
   "retina_detect": true
 });
 
@@ -177,60 +160,125 @@ function openConfig(i) {
     currentBot = bots[i];
     document.getElementById('botTitle').textContent = `Configure ${currentBot.name}`;
     document.getElementById('tokenField').value = currentBot.token;
-    document.getElementById('statusToggle').checked = currentBot.online || false;
-    document.getElementById('statusText').textContent = currentBot.online ? "Online" : "Offline";
-    document.getElementById('guildSelect').innerHTML = '<option>Loading guilds...';
+    const isOnline = currentBot.online || false;
+    document.getElementById('statusToggle').checked = isOnline;
+    document.getElementById('statusText').textContent = isOnline ? "Online" : "Offline";
+    document.getElementById('statusBadge').textContent = isOnline ? "Online" : "Offline";
+    document.getElementById('statusBadge').style.background = isOnline ? "#00ff88" : "#ff0066";
+
+    document.getElementById('guildSelect').innerHTML = '<option value="">Loading guilds...</option>';
     fetch('https://discord.com/api/v10/users/@me/guilds', {headers:{Authorization:`Bot ${currentBot.token}`}})
-        .then(r=>r.json()).then(g=> {
+        .then(r=>r.json())
+        .then(guilds => {
             const s = document.getElementById('guildSelect');
             s.innerHTML = '<option value="">Select Server</option>';
-            g.forEach(guild=>{ let o=document.createElement('option'); o.value=guild.id; o.text=guild.name; s.appendChild(o); });
+            guilds.forEach(g => {
+                let o = document.createElement('option');
+                o.value = g.id;
+                o.textContent = g.name;
+                s.appendChild(o);
+            });
+        })
+        .catch(() => {
+            document.getElementById('guildSelect').innerHTML = '<option value="">Error loading guilds</option>';
         });
+
+    document.getElementById('channelSelect').innerHTML = '<option value="">Select guild first</option>';
     show('config');
+}
+
+function loadChannels() {
+    const guildId = document.getElementById('guildSelect').value;
+    const channelSelect = document.getElementById('channelSelect');
+    if (!guildId) {
+        channelSelect.innerHTML = '<option value="">Select guild first</option>';
+        return;
+    }
+    channelSelect.innerHTML = '<option value="">Loading channels...</option>';
+    fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
+        .then(r=>r.json())
+        .then(channels => {
+            channelSelect.innerHTML = '<option value="">Select Channel</option>';
+            channels
+                .filter(c => c.type === 0)
+                .forEach(c => {
+                    let o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = c.name;
+                    channelSelect.appendChild(o);
+                });
+        })
+        .catch(() => {
+            channelSelect.innerHTML = '<option value="">Failed to load channels</option>';
+        });
+}
+
+function toggleOnline() {
+    const checked = document.getElementById('statusToggle').checked;
+    currentBot.online = checked;
+    document.getElementById('statusText').textContent = checked ? "Online" : "Offline";
+    document.getElementById('statusBadge').textContent = checked ? "Online" : "Offline";
+    document.getElementById('statusBadge').style.background = checked ? "#00ff88" : "#ff0066";
+    localStorage.setItem("vbots", JSON.stringify(bots));
+}
+
+function send() {
+    const channelId = document.getElementById('channelSelect').value;
+    const message = document.getElementById('msgInput').value.trim();
+
+    if (!channelId) return alert("Please select a channel");
+    if (!message) return alert("Please enter a message");
+
+    fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bot ${currentBot.token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ content: message })
+    })
+    .then(r => {
+        if (r.ok) {
+            alert("Message sent successfully!");
+            document.getElementById('msgInput').value = '';
+        } else {
+            alert("Failed to send message");
+        }
+    })
+    .catch(() => alert("Network error"));
+}
+
+function runCode() {
+    alert("Custom code execution simulated — ready for real backend integration");
 }
 
 function back() { show('bots'); }
 
-function loadChannels() {
-    const gid = document.getElementById('guildSelect').value;
-    if(!gid) return;
-    fetch(`https://discord.com/api/v10/guilds/${gid}/channels`, {headers:{Authorization:`Bot ${currentBot.token}`}})
-        .then(r=>r.json()).then(ch=> {
-            const s = document.getElementById('channelSelect');
-            s.innerHTML = '<option value="">Select Channel</option>';
-            ch.filter(c=>c.type===0).forEach(c=>{ let o=document.createElement('option'); o.value=c.id; o.text=c.name; s.appendChild(o); });
-        });
-}
-
-function send() {
-    const ch = document.getElementById('channelSelect').value;
-    const msg = document.getElementById('msgInput').value;
-    if(!ch||!msg) return alert("Select channel + message");
-    fetch(`https://discord.com/api/v10/channels/${ch}/messages`, {
-        method:"POST",
-        headers:{"Authorization":`Bot ${currentBot.token}`,"Content-Type":"application/json"},
-        body:JSON.stringify({content:msg})
-    }).then(()=>alert("Sent")).catch(()=>alert("Failed"));
-}
-
-function runCode() { alert("Custom code executed (simulated)"); }
-
 function del(i) {
-    if(confirm("Delete this bot?")){ bots.splice(i,1); localStorage.setItem("vbots",JSON.stringify(bots)); render(); }
+    if (confirm("Delete this bot permanently?")) {
+        bots.splice(i,1);
+        localStorage.setItem("vbots", JSON.stringify(bots));
+        render();
+    }
 }
 
 document.getElementById('addBotBtn').onclick = () => {
-    const t = prompt("Bot Token:");
-    if(!t) return;
-    fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:`Bot ${t}`}})
-        .then(r=>r.json()).then(u=>{
-            if(u.id){
-                const d = prompt("Description:","ts so friggn tuff");
-                bots.push({name:u.username, desc:d, token:t, online:false});
-                localStorage.setItem("vbots",JSON.stringify(bots));
+    const token = prompt("Enter Bot Token:");
+    if (!token) return;
+
+    fetch('https://discord.com/api/v10/users/@me', {headers:{Authorization:`Bot ${token}`}})
+        .then(r=>r.json())
+        .then(user => {
+            if (user.id) {
+                const desc = prompt("Bot description:", "ts so friggn tuff") || "ts so friggn tuff";
+                bots.push({name: user.username, desc, token, online: false});
+                localStorage.setItem("vbots", JSON.stringify(bots));
                 render();
-            }else alert("Invalid token");
-        });
+            } else {
+                alert("Invalid token");
+            }
+        })
+        .catch(() => alert("Error validating token"));
 };
 
 render();
